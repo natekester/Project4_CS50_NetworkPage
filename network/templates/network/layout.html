@@ -18,15 +18,15 @@
               <ul class="navbar-nav mr-auto">
                 {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" data-link="user"><strong>{{ user.username }}</strong></a>
+                        <a class="nav-link" data-link="user" ><strong>{{ user.username }}</strong></a>
                     </li>
                 {% endif %}
                 <li class="nav-item">
-                  <a class="nav-link" data-link="all_posts">All Posts</a>
+                  <a class="nav-link" data-link="all_posts" href="{% url 'index' %}">All Posts</a>
                 </li>
                 {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" data-link="following">Following</a>
+                        <a class="nav-link" data-link="following" >Following</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'logout' %}">Log Out</a>

@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     var currentPage = path;
     console.log(`our current split url is: ${currentPage}`)
-    if(currentPage.includes('/') && currentPage.split('/')[2].length > 0){
+    if(currentPage.includes('/') && typeof currentPage.split('/')[2] !== 'undefined'){
       page = currentPage.split('/')[1];
       console.log(`we just assigned page: ${page}`)
       id = currentPage.split('?')[0];
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   }
   else{
-    loadPage('all_posts')
+    loadPage('all_posts', null, null)
     
   }
 
@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 });
 });
+
+
+
 
 async function loadPage(page, id, section){
   console.log(`value of id is ${id}`)
@@ -164,10 +167,29 @@ async function allPosts(section){
 
   var posts = await getAllPosts(section);
   console.log(posts);
+  var lenPosts = Object.keys(posts).length;
 
-  var results = `${posts['allUser']}`
-//   `<nav aria-label="Page navigation example">
-//   <ul class="pagination">
+  var results =`<nav aria-label="Page navigation example">
+                  <ul class="pagination">`;
+
+  for(i=0; i<lenPosts; i++){
+    var user = posts[i][0];
+    var text = posts[i][1];
+    var likes = posts[i][2];
+    var date = posts[i][3];
+    var id = posts[i][4];
+    console.log(`user: ${user}, userId: ${id} text: ${text}, likes: ${likes}, date:${date}` );
+    var post = `<br><div class="page-item"><a class="user">${user}</a><h6 class="post_text" onclick> ${text}</h6><small class="likes">${likes}</small><small class="date">${date}</small></div>`;
+    results= results + post;
+
+  }
+
+  var wrap = `</ul> </nav>`;
+  results = results + wrap;
+  console.log(`Our html is: ${results}`)
+
+
+
 //     <li class="page-item"><a class="page-link" href="#">Previous</a></li>
 //     <li class="page-item"><a class="page-link" href="#">1</a></li>
 //     <li class="page-item"><a class="page-link" href="#">2</a></li>

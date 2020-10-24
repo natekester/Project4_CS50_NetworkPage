@@ -5,6 +5,8 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+import json
+
 
 from .models import User, Like, Post, Follow
 
@@ -21,15 +23,27 @@ def all_posts(request):
     print("starting all posts")
     if request.method == "GET":
         print('test1')
-        pag_num = request.GET.get('page', None)
+        curr_page = request.GET.get('page', None)
         print('test2')
-        print(f'we passed the var: {pag_num}')
+        print(f'we passed the var: {curr_page}')
         posts = Post.objects.all()
-        print( f'all our posts: {posts}')
+        for post in posts:
+            print('post')
+        
         pages = Paginator(posts, pag_num)
-        page = pages.page(pag_num)
-        print(f'our current page num: {pag_num} and our page content: {page}')
-        return JsonResponse(page.object_list ,safe = False)
+        page = pages.get_page(curr_page)
+        
+        data = {}
+        position = 0
+        print('trying to find all objects in the first page')
+        for item in page:
+            data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id]
+            position = position + 1
+            print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
+
+        print(f'our current page num: {pag_num} and our page content: {data}')
+        print(json.dumps(data))
+        return JsonResponse(data,safe = False)
         
     else:
         print(request.body)
@@ -39,7 +53,8 @@ def all_posts(request):
 
 
 def following(request, id):
-    #going to have to do a check for the following user?
+    #going to have to do a check for the following user to make sure its' same as user
+    #don't want to allow users to see others following?
     print("starting the following func")
     if request.method == "GET":
         return JsonResponse({"user": "post"})
