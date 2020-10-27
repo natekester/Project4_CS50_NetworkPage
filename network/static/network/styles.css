@@ -1,6 +1,36 @@
+
+#posts{
+    align-content: left;
+
+    padding: 10px;
+}
 .page-item{
 
-    align-content: left;
-    border: 3px solid black;
+
+    border: 3px solid lightblue;
     padding: 20px;
+    display: block;
+    border-radius: 20px;
+    margin: 5px;
+    margin-left: 0;
+
+}
+.prev{
+    border-color: lightblue;
+    border-radius: 20px;
+    background-color: white;
+
+}
+.next{
+    border-color: lightblue;
+    border-radius: 20px;
+    background-color: white;
+
+}
+#chirpy{
+    -webkit-text-stroke-width: 2px;
+    -webkit-text-stroke-color: lightblue;
+    color: white;
+    font-size: 300%;
+    
 }

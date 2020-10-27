@@ -67,6 +67,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 });
 
+function setupUserNameClick(){
+  document.querySelectorAll('.user').forEach( userPost => {
+    userPost.onclick = function(){
+      //basically redirect to user page and push history
+      const id = userPost.dataset.id;
+      const page = 'user';
+      const section = 1;
+
+      history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
+      userPage(id, section);
+
+    }
+  })
+
+}
+
 
 
 
@@ -122,7 +138,7 @@ async function loadPage(page, id, section){
       
       console.log(`Our user id that made it out of the func is: ${id}`)
       
-      userPage(section,id);
+      userPage(id, section);
 
     }else if(page == "following"){
       
@@ -161,74 +177,195 @@ function showSection(page) {
 
 }
 
-async function allPosts(section){
-  clearAll();
-  document.querySelector('#all_posts').style.display = 'block'
+function postHTML(posts){
 
-  var posts = await getAllPosts(section);
-  console.log(posts);
   var lenPosts = Object.keys(posts).length;
 
-  var results =`<nav aria-label="Page navigation example">
-                  <ul class="pagination">`;
+  var results =`<ul id="posts">`;
 
-  for(i=0; i<lenPosts; i++){
+
+  for(i=1; i<lenPosts; i++){
     var user = posts[i][0];
     var text = posts[i][1];
     var likes = posts[i][2];
     var date = posts[i][3];
     var id = posts[i][4];
     console.log(`user: ${user}, userId: ${id} text: ${text}, likes: ${likes}, date:${date}` );
-    var post = `<br><div class="page-item"><a class="user">${user}</a><h6 class="post_text" onclick> ${text}</h6><small class="likes">${likes}</small><small class="date">${date}</small></div>`;
+    var post = `<li class="page-item"><h5 class="user" data-id=${id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes"> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small></li>`;
     results= results + post;
 
   }
+  var hasNextPage = posts[0][0];
+  var hasPrevious = posts[0][1];
 
-  var wrap = `</ul> </nav>`;
+  var wrap = `</ul>`;
   results = results + wrap;
-  console.log(`Our html is: ${results}`)
+
+  if(hasPrevious === true){
+    //add a next page button
+    var prevButton = `<input class="prev" type="button" value="Previous Page"></input>`;
+    results = results + prevButton;
+  }else if (hasNextPage === true){
+    //add a previous page button
+    var nextButton = `<input class="next" type="button" value="Next Page"></input>`;
+    results = results + nextButton;
+
+  }
+  return results;
+
+
+}
 
 
 
-//     <li class="page-item"><a class="page-link" href="#">Previous</a></li>
-//     <li class="page-item"><a class="page-link" href="#">1</a></li>
-//     <li class="page-item"><a class="page-link" href="#">2</a></li>
-//     <li class="page-item"><a class="page-link" href="#">3</a></li>
-//     <li class="page-item"><a class="page-link" href="#">Next</a></li>
-//   </ul>
-// </nav>`
+function setupNextPageClick(page, section, id){
+  console.log("seting up click for next");
+  section = parseInt(section);
+  if(page == "all_posts"){
 
+
+    document.querySelectorAll('.next').forEach( nextButton => {
+      nextButton.onclick = function(){
+        section = section + 1;
+        history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
+        allPosts(section);
+        console.log("we just clicked the next button")
+
+      }
+    })
+
+    document.querySelectorAll('.prev').forEach( prev => {
+      prev.onclick = function(){
+        section = section - 1;
+
+        history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
+        allPosts(section);
+
+      }
+    })
+
+  }else if (page == "following"){
+    document.querySelectorAll('.next').forEach( nextButton => {
+      nextButton.onclick = function(){
+        section = section + 1;
+
+        history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
+        followingPosts(section,id);
+  
+      }
+    })
+
+    document.querySelectorAll('.prev').forEach( prev => {
+      prev.onclick = function(){
+        section = section - 1;
+
+        history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
+        followingPosts(section,id);
+
+      }
+    })
+  }else if (page == "user"){
+    document.querySelectorAll('.next').forEach( nextButton => {
+      nextButton.onclick = function(){
+        section = section + 1;
+
+        history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
+        userPage(section,id);
+    
+      }
+    })
+
+    document.querySelectorAll('.prev').forEach( prev => {
+      prev.onclick = function(){
+        section = section - 1;
+
+        history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
+        userPage(section,id);
+  
+      }
+    })
+  }
+
+}
+
+async function userPage(id, section){
+  clearAll();
+
+  //get how mamy follows - and how many following
+
+
+  document.querySelector('#all_posts').style.display = 'block';
+  document.querySelector('#user_page').style.display = 'block';
+
+
+  var posts = await getUserPosts(id, section);
+  console.log(posts);
+  const following = posts[0][2];
+  const followed = posts[0][3];
+  const user = posts[0][0];
+
+  const userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following: ${followed} Users</h6></div>` ;
+
+  
+  document.querySelector('#user_page').innerHTML = userHTML;
+  var results = postHTML(posts);
+
+  
 
   document.querySelector('#all_posts').innerHTML = results;
   //get all posts and display from paginator
-  
-}
 
-function userPage(id,section){
-  clearAll();
-  //need to fetch user information
-  //then search based off of that user info
 
+
+  setupNextPageClick('user', section, id);
+  setupUserNameClick();
 
 };
 
-async function followingPosts(section, id){
-  clearAll();
-  //need to fetch user information
-  //then filter based off of followers
-  console.log("asking for following request")
+
+async function getUserPosts(id,section){
+  const url = `api/user/${id}?page=${section}`
   
-
-  document.querySelector('#following_posts').style.display = 'block'
-
-  const response = await fetch(`api/following/${id}?page${section}`)  
-
-  const body = await response.json();
-  console.log(`our body is: ${body['user']}`)
-
-  document.querySelector('#following_posts').innerHTML = body['user'];
+  console.log(`fetching the url: ${url}`)
+  const response = await fetch(url)
+  const body = await response.json()
+  
+  return body;
 
 }
+
+async function followingPosts(section, id){
+  clearAll();
+
+  document.querySelector('#all_posts').style.display = 'block'
+
+  var posts = await getFollowingPosts(id, section);
+  console.log(posts);
+
+  var results = postHTML(posts);
+  
+
+  document.querySelector('#all_posts').innerHTML = results;
+  //get all posts and display from paginator
+
+  setupNextPageClick('following', section, id);
+  setupUserNameClick();
+}
+
+
+
+async function getFollowingPosts(id,section){
+  const url = `api/following/${id}?page=${section}`
+  
+  console.log(`fetching the url: ${url}`)
+  const response = await fetch(url)
+  const body = await response.json()
+  
+  return body;
+
+}
+
+
 
 async function getUserId(){
   var userid;
@@ -250,4 +387,23 @@ async function getAllPosts(section){
   const body = await response.json()
   
   return body;
+}
+
+async function allPosts(section){
+  clearAll();
+  document.querySelector('#all_posts').style.display = 'block'
+
+  var posts = await getAllPosts(section);
+  console.log(posts);
+
+  var results = postHTML(posts);
+  
+
+  document.querySelector('#all_posts').innerHTML = results;
+  //get all posts and display from paginator
+  
+  setupNextPageClick('all_posts', section, null);
+  setupUserNameClick();
+
+
 }
