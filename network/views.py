@@ -18,39 +18,44 @@ def index(request):
     print(request)
     return render(request, "network/index.html")
 
-def paginationJson(posts, curr_page):
+
+
+
+def paginationJson(posts, curr_page, likes=None, user=None, following=None, followed=None):
             
     pages = Paginator(posts, pag_num)
     page = pages.get_page(curr_page)
     
     data = {}
     position = 1
-    data[0] = [page.has_next(), page.has_previous()]
-    print('trying to find all objects in the first page')
-    for item in page:
-        data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id]
-        position = position + 1
-        print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
+    print(f'Our user entered was: {user}')
+    if(user == None ):
+        data[0] = [page.has_next(), page.has_previous(), None, following, followed]
+        for item in page:
 
-    print(f'our current page num: {pag_num} and our page content: {data}')
-    print(json.dumps(data))
-
-    return data
+            data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, False, item.id]
+            position = position + 1
+            print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
 
 
-def paginationJsonUser(posts, curr_page, following, followed):
-            
-    pages = Paginator(posts, pag_num)
-    page = pages.get_page(curr_page)
-    
-    data = {}
-    position = 1
-    data[0] = [page.has_next(), page.has_previous(), following, followed]
-    print('trying to find all objects in the first page')
-    for item in page:
-        data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id]
-        position = position + 1
-        print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
+    else:
+        data[0] = [page.has_next(), page.has_previous(), user.username, following, followed]
+        print('trying to find all objects in the first page')
+        for item in page:
+            print(f' does object like exist? {likes.filter(post=item).exists()}')
+            if likes.filter(post=item).exists() == True:
+                likes_filt = likes.filter(post=item)
+                likes_filt = likes_filt.order_by('-id')
+                print(f' the object for the item has a value of: {likes_filt[0].like} for like from the user: {likes_filt[0].user.username}')
+
+            if(likes != None and likes.filter(post=item).exists() and likes.filter(post=item).order_by('-id')[0].like == True):
+                wasLiked = True
+            else:
+                wasLiked = False
+
+            data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, wasLiked, item.id]
+            position = position + 1
+            print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
 
     print(f'our current page num: {pag_num} and our page content: {data}')
     print(json.dumps(data))
@@ -65,10 +70,25 @@ def all_posts(request):
 
         posts = Post.objects.all()
 
-        
-        data = paginationJson(posts,curr_page)
+        #TODO add in an option for an unsigned in user
+        print(f'our requests user id is: {request.user.id}')
+        if(request.user.id != None):
+            requesting_id = request.user.id
+            requesting_user = User.objects.get(id=requesting_id)
+            likes = Like.objects.filter(post__in=posts, user=requesting_user, like=True)
+            for like in likes:
+                print(f'user {like.user.username} liked post: {like.post.text}')
+            
+            data = paginationJson(posts, curr_page, likes, requesting_user)
 
-        return JsonResponse(data,safe = False)
+
+            return JsonResponse(data,safe = False)
+        else:
+            data = paginationJson(posts, curr_page)
+
+
+            return JsonResponse(data,safe = False)
+
         
     else:
         #return all posts in POST database
@@ -85,9 +105,11 @@ def following(request, id):
         user = User.objects.get(id=id)
         following = Follow.objects.filter(following_user=user)
         posts = Post.objects.filter(user__in=following.values_list('followed_user', flat=True))
-
-        
-        data = paginationJson(posts,curr_page)
+        #TODO add in an option for an unsigned in user
+        requesting_id = request.user.id
+        requesting_user = User.objects.get(id=requesting_id)
+        likes = Like.objects.filter(post__in=posts, user=requesting_user, like=True)
+        data = paginationJson(posts, curr_page,  likes, user)
 
         return JsonResponse(data,safe = False)
 
@@ -109,9 +131,10 @@ def user(request, id):
         following = Follow.objects.filter(followed_user = user).count()
         followed = Follow.objects.filter(following_user = user).count()
 
-
-        
-        data = paginationJsonUser(posts, curr_page, following, followed)
+        requesting_id = request.user.id
+        requesting_user = User.objects.get(id=requesting_id)
+        likes = Like.objects.filter(post__in=posts, user=requesting_user, like=True)
+        data = paginationJson(posts, curr_page, likes, user, following, followed)
 
         return JsonResponse(data,safe = False)
     if request.user:

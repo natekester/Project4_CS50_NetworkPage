@@ -34,3 +34,17 @@
     font-size: 300%;
     
 }
+#user_section{
+    background-color: lightcyan;
+    border-radius: 20px;
+}
+.like{
+    border-radius: 50%;
+    background-color: lightblue;
+
+}
+.unlike{
+    border-radius: 50%;
+    background-color: orange;
+
+}

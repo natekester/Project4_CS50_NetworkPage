@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', function() {
 
   var path = window.location.href;
-  console.log(`href is: ${path}`);
   var id = null;
 
   
@@ -17,10 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var pageNum = path.split('=')[1];
     
     var currentPage = path;
-    console.log(`our current split url is: ${currentPage}`)
     if(currentPage.includes('/') && typeof currentPage.split('/')[2] !== 'undefined'){
       page = currentPage.split('/')[1];
-      console.log(`we just assigned page: ${page}`)
       id = currentPage.split('?')[0];
       id = id.split('/')[2]
 
@@ -28,8 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
       page = currentPage.split('?')[0];
       page = page.split('/')[1];
       pageNum = currentPage.split('=')[1];
-      console.log(`we just pulled the page num param: ${pageNum}`)
-      console.log(`parsing the page num gives us: ${parseInt(pageNum, 10)}`)
     }
 
     if(pageNum == parseInt(pageNum, 10)){
@@ -67,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 });
 
-function setupUserNameClick(){
+function setupPostClick(){
   document.querySelectorAll('.user').forEach( userPost => {
     userPost.onclick = function(){
       //basically redirect to user page and push history
@@ -80,25 +75,81 @@ function setupUserNameClick(){
 
     }
   })
+  document.querySelectorAll('.like').forEach( userPost => {
+    userPost.onclick = function(){
+      //we need the like in the page to update and to update the database.
+      const id = userPost.dataset.id;
+      var post = document.querySelector(`#like_${id}`)
+      console.log(` our parsed int is: ${parseInt(post.dataset.likes)}`)
 
+
+      var likes = parseInt(post.dataset.likes)+1;
+      post.setAttribute('data-likes', likes);
+      
+      console.log(`unliking post: ${id} new likes are: ${userPost.dataset.likes}`)
+      
+      likePost(id,likes);
+
+
+    }
+  })
+  document.querySelectorAll('.unlike').forEach( userPost => {
+    userPost.onclick = function(){
+      //we need the like in the page to update and to update the database.
+      const id = userPost.dataset.id;
+      var post = document.querySelector(`#like_${id}`)
+      console.log(` our parsed int is: ${parseInt(post.dataset.likes)}`)
+
+      var likes = parseInt(post.dataset.likes)-1;
+      post.setAttribute('data-likes', likes);
+      console.log(`unliking post: ${id} new likes are: ${userPost.dataset.likes}`)
+      
+      unlikePost(id,likes);
+
+
+
+    }
+  })
+
+}
+
+async function likePost(id, likes){
+
+
+
+
+  document.querySelector(`#like_${id}`).innerHTML = `Likes: ${likes}`;
+  document.querySelector(`#like_cont_${id}`).innerHTML = `<input class="unlike" type="button" data-id=${id} value="Un-Like"></input>`;
+
+  
+
+  setupPostClick()
+  //that is a very inefficient method - but at least it reduces code - using react would be better.
+  return "liked"
+}
+
+async function unlikePost(id, likes){
+
+  document.querySelector(`#like_${id}`).innerHTML = `Likes: ${likes}`;
+  document.querySelector(`#like_cont_${id}`).innerHTML = `<input class="like" type="button" data-id=${id} value="Like"></input>`;
+
+  setupPostClick()
+  //that is a very inefficient method - but at least it reduces code - using react would be better.
+  return "unliked"
 }
 
 
 
 
 async function loadPage(page, id, section){
-  console.log(`value of id is ${id}`)
   if( page == null){
     page = "all_posts";
   }
 
   if(id == null && section == null){
     section = 1;
-    console.log(`our page value is: ${page}`)
     if( page == "all_posts"){
-      console.log(`Our current page value is: ${page}`)
       history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
-      console.log("calling all posts - page 1")
       allPosts(section);
     }
     else if(page == "user"){
@@ -107,7 +158,6 @@ async function loadPage(page, id, section){
 
 
       id = await getUserId()
-      console.log(`Our user id that made it out of the func is: ${id}`)
       
       
       history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
@@ -115,7 +165,6 @@ async function loadPage(page, id, section){
     }else if(page == "following"){
       
         id = await getUserId()
-        console.log(`first follow- id is: ${id}`)
         
       
         history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
@@ -136,14 +185,12 @@ async function loadPage(page, id, section){
 
       history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
       
-      console.log(`Our user id that made it out of the func is: ${id}`)
       
       userPage(id, section);
 
     }else if(page == "following"){
       
   
-      console.log(`starting to load following page with id: ${id}`)
       history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
       followingPosts(section,id);
     }
@@ -160,7 +207,6 @@ async function loadPage(page, id, section){
 
 
 window.onpopstate = function(event) {
-  console.log(event.state.page);
   loadPage(event.state.page, event.state.id, event.state.section);
 }
 
@@ -182,17 +228,43 @@ function postHTML(posts){
   var lenPosts = Object.keys(posts).length;
 
   var results =`<ul id="posts">`;
+  var signedIn;
 
+  if( posts[0][2] == null){
+    signedIn = false;
 
+  }
+  else{
+    signedIn = true;
+  }
+
+  
   for(i=1; i<lenPosts; i++){
     var user = posts[i][0];
     var text = posts[i][1];
     var likes = posts[i][2];
     var date = posts[i][3];
     var id = posts[i][4];
-    console.log(`user: ${user}, userId: ${id} text: ${text}, likes: ${likes}, date:${date}` );
-    var post = `<li class="page-item"><h5 class="user" data-id=${id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes"> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small></li>`;
-    results= results + post;
+    var hasLiked = posts[i][5];
+    var postId = posts[i][6];
+    //need new variable: hasLiked
+    //TODO: setup a like and unlike button here.
+    var post = `<li class="page-item"><h5 class="user" data-id=${id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes" id="like_${postId}" data-likes=${likes}> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small>`;
+    
+    if(signedIn){
+      if(hasLiked == true){
+        //add unlike button
+        var unlikeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="unlike" type="button" data-id=${postId} value="Un-Like"></input></div></li>`
+        post = post + unlikeButton;
+      }
+      else{
+        //add like button
+        var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id=${postId} value="Like"></input></div></li>`
+        post = post + likeButton;
+      }
+    }
+
+    results= results + post ;
 
   }
   var hasNextPage = posts[0][0];
@@ -219,7 +291,6 @@ function postHTML(posts){
 
 
 function setupNextPageClick(page, section, id){
-  console.log("seting up click for next");
   section = parseInt(section);
   if(page == "all_posts"){
 
@@ -229,7 +300,6 @@ function setupNextPageClick(page, section, id){
         section = section + 1;
         history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
         allPosts(section);
-        console.log("we just clicked the next button")
 
       }
     })
@@ -299,12 +369,12 @@ async function userPage(id, section){
 
 
   var posts = await getUserPosts(id, section);
-  console.log(posts);
-  const following = posts[0][2];
-  const followed = posts[0][3];
-  const user = posts[0][0];
-
-  const userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following: ${followed} Users</h6></div>` ;
+  const user = posts[0][2];
+  const following = posts[0][3];
+  const followed = posts[0][4];
+  
+  //TODO include a follow button here
+  const userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following this many Users: ${followed}</h6></div>` ;
 
   
   document.querySelector('#user_page').innerHTML = userHTML;
@@ -318,7 +388,7 @@ async function userPage(id, section){
 
 
   setupNextPageClick('user', section, id);
-  setupUserNameClick();
+  setupPostClick();
 
 };
 
@@ -326,7 +396,6 @@ async function userPage(id, section){
 async function getUserPosts(id,section){
   const url = `api/user/${id}?page=${section}`
   
-  console.log(`fetching the url: ${url}`)
   const response = await fetch(url)
   const body = await response.json()
   
@@ -340,7 +409,6 @@ async function followingPosts(section, id){
   document.querySelector('#all_posts').style.display = 'block'
 
   var posts = await getFollowingPosts(id, section);
-  console.log(posts);
 
   var results = postHTML(posts);
   
@@ -349,7 +417,7 @@ async function followingPosts(section, id){
   //get all posts and display from paginator
 
   setupNextPageClick('following', section, id);
-  setupUserNameClick();
+  setupPostClick();
 }
 
 
@@ -357,7 +425,6 @@ async function followingPosts(section, id){
 async function getFollowingPosts(id,section){
   const url = `api/following/${id}?page=${section}`
   
-  console.log(`fetching the url: ${url}`)
   const response = await fetch(url)
   const body = await response.json()
   
@@ -372,9 +439,7 @@ async function getUserId(){
 
   const response = await fetch('api/user')
   const body = await response.json()
-  console.log(`our userid body is: ${body['id']}`)
   userid = body['id']
-  console.log(`our user id is: ${userid}`)
 
   return userid;
 }
@@ -382,7 +447,6 @@ async function getUserId(){
 async function getAllPosts(section){
   const url = `api/all_posts?page=${section}`
   
-  console.log(`fetching the url: ${url}`)
   const response = await fetch(url)
   const body = await response.json()
   
@@ -394,7 +458,6 @@ async function allPosts(section){
   document.querySelector('#all_posts').style.display = 'block'
 
   var posts = await getAllPosts(section);
-  console.log(posts);
 
   var results = postHTML(posts);
   
@@ -403,7 +466,7 @@ async function allPosts(section){
   //get all posts and display from paginator
   
   setupNextPageClick('all_posts', section, null);
-  setupUserNameClick();
+  setupPostClick();
 
 
 }
