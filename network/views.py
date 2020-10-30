@@ -77,6 +77,14 @@ def create_post(request):
     else:
          return JsonResponse({'message': 'not a post'}, status=401)
 
+@csrf_exempt
+def get_post_text(request, id):
+    if request.method == "GET":
+        post = Post.objects.get(id=id)
+        return JsonResponse({'text': f'{post.text}'})
+    
+    
+
 
 @csrf_exempt
 def edit_post(request):

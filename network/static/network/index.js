@@ -139,6 +139,9 @@ function setupPostClick(){
     edit.onclick = async function(){
       const post_id = edit.dataset.postid;
 
+      editPost(post_id);
+      
+
 
     }
   })
@@ -146,7 +149,65 @@ function setupPostClick(){
 
 }
 
-function editPost(post_id){
+async function editPost(post_id){
+  clearAll()
+
+
+
+  var text = await getPostText(post_id)
+
+  console.log(`the text recieved was ${text}`)
+  document.querySelector('#create_post').style.display = 'block'
+
+
+
+  //then set the "submit post" html up with no posts, and the inner value to be equal to the current one
+  document.querySelector('#create_post').innerHTML = `<h5>Editing post:</h5><input type="text" id="input_text" value="${text}"></input>
+  <br><br>
+  <input id="submit_edit" type="button" value="Submit Edit!">`;
+
+  user_id = await getUserId();
+
+  document.getElementById('submit_edit').onclick = function() {
+    submitEdit(post_id, document.getElementById('input_text').value, user_id);
+    loadPage('all_posts', null, null);
+
+
+  };
+
+
+
+
+
+
+}
+
+async function getPostText(post_id){
+
+  const url = `api/get_post_text/${post_id}`
+  
+  const response = await fetch(url);
+  const body = await response.json();
+  
+  return body['text'];
+
+}
+
+async function submitEdit(post_id, text, user_id){
+
+  const url = "api/edit_post"
+  
+  const response = await fetch(url, { method: "POST",
+    body: JSON.stringify({
+      id: `${post_id}`,
+      text: `${text}`,
+      user: `${user_id}`
+    })}
+  );
+  const body = await response.json()
+  
+  return body;
+
 
 
 }
@@ -196,7 +257,7 @@ async function likePost(post_id, user_id, likes){
   setupPostClick()
   //that is a very inefficient method - but at least it reduces code - using react would be better.
 
-}
+}edit
 
 async function unlikePost(post_id, user_id,  likes){
 
@@ -344,22 +405,24 @@ function postHTML(posts){
 
       if(hasLiked == true){
         //add unlike button
-        var unlikeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="unlike" type="button" data-id="${postId}" value="Un-Like"></input>`
+        var unlikeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="unlike" type="button" data-id="${postId}" value="Un-Like"></input></div>`
         post = post + unlikeButton;
       }
       else{
         //add like button
-        var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id="${postId}" value="Like"></input>`
+        var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id="${postId}" value="Like"></input></div>`
         post = post + likeButton;
       }
 
       if(id == user_id ){
-        var editButton = ` <input id="edit" type="button" data-postid="${postId}" value="Edit Post"></input></div></li>`
+        var editButton = ` <input id="edit" type="button" data-postid="${postId}" value="Edit Post"></input></li>`
         post = post + editButton;
       }
 
-      const endTag = `</div></li>`;
-      post = post + endTag;
+      end = `</li>`;
+      post = post + end;
+
+ 
 
       //now lets add an edit button if the user of the post is the same as the current user.
     }
@@ -372,12 +435,19 @@ function postHTML(posts){
 
   var wrap = `</ul>`;
   results = results + wrap;
-
-  if(hasPrevious === true){
+  
+  if(hasPrevious === true && hasNextPage === true){
     //add a next page button
     var prevButton = `<input class="prev" type="button" value="Previous Page"></input>`;
     results = results + prevButton;
-  }else if (hasNextPage === true){
+    var nextButton = `<input class="next" type="button" value="Next Page"></input>`;
+    results = results + nextButton;
+
+  }else if(hasPrevious === true){
+    var prevButton = `<input class="prev" type="button" value="Previous Page"></input>`;
+    results = results + prevButton;
+  }
+  else if (hasNextPage === true){
     //add a previous page button
     var nextButton = `<input class="next" type="button" value="Next Page"></input>`;
     results = results + nextButton;
