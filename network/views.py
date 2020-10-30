@@ -5,20 +5,13 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.views.decorators.csrf import csrf_exempt
 import json
 
 
 from .models import User, Like, Post, Follow
 
 pag_num = 10; #amount of pages for paginator
-
-
-def index(request):
-    
-    print(request)
-    return render(request, "network/index.html")
-
-
 
 
 def paginationJson(posts, curr_page, likes=None, user=None, following=None, followed=None):
@@ -28,50 +21,231 @@ def paginationJson(posts, curr_page, likes=None, user=None, following=None, foll
     
     data = {}
     position = 1
-    print(f'Our user entered was: {user}')
     if(user == None ):
-        data[0] = [page.has_next(), page.has_previous(), None, following, followed]
+        data[0] = [page.has_next(), page.has_previous(), None, following, followed, None]
         for item in page:
 
             data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, False, item.id]
             position = position + 1
-            print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
 
 
     else:
-        data[0] = [page.has_next(), page.has_previous(), user.username, following, followed]
-        print('trying to find all objects in the first page')
+        data[0] = [page.has_next(), page.has_previous(), user.username, following, followed, user.id ]
         for item in page:
-            print(f' does object like exist? {likes.filter(post=item).exists()}')
             if likes.filter(post=item).exists() == True:
                 likes_filt = likes.filter(post=item)
                 likes_filt = likes_filt.order_by('-id')
-                print(f' the object for the item has a value of: {likes_filt[0].like} for like from the user: {likes_filt[0].user.username}')
 
-            if(likes != None and likes.filter(post=item).exists() and likes.filter(post=item).order_by('-id')[0].like == True):
+            if(likes.filter(post=item).exists() and likes.filter(post=item).order_by('id')[0].like == True):
                 wasLiked = True
             else:
                 wasLiked = False
 
             data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, wasLiked, item.id]
             position = position + 1
-            print(f'item: {item.text}, {item.user.username}, {item.total_likes}, {item.time.strftime("%m/%d/%Y, %H:%M:%S")}, {item.user.id}')
 
-    print(f'our current page num: {pag_num} and our page content: {data}')
-    print(json.dumps(data))
 
     return data
 
 
+def index(request):
+    
+    print(request)
+    return render(request, "network/index.html")
+
+#i'm going to follow bad practice here and not worry about the CSRF token because It's a not hosted (i would add it into cache with django and call it in js and add it as a JSON header)
+@csrf_exempt
+def create_post(request):
+    if request.method == "POST":
+        print('starting creating a post')
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        text = body['text']
+        print(f'our recieved post text: {text}')
+        user_id = body['user_id']
+        user = User.objects.get(id=user_id)
+        print(f' our request.user was: {request.user}')
+        print(f'our input for user id in body was: {user_id}')
+        print(f'while the request id was: {request.user.id}')
+
+        if(int(user_id) == int(request.user.id)):
+            p = Post(text=text,user=user,total_likes=0)
+            p.save()
+            return JsonResponse({'Post Created': 'true'})
+        else:
+            return JsonResponse({'message': 'not auth'}, status=401)
+    else:
+         return JsonResponse({'message': 'not a post'}, status=401)
+
+
+@csrf_exempt
+def edit_post(request):
+    if request.method == "POST":
+  
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+
+        post_id = body['id']
+        text = body['text']
+        user_id = body['user']
+        request_id = request.user.id
+        if(int(user_id) == int(request.user.id)):
+            post = Post.objects.get(id=post_id)
+            post.text = text
+            post.save()
+        else:
+            return JsonResponse({'message': 'not auth'}, status=401)
+
+
+        
+
+#i'm going to follow bad practice here and not worry about the CSRF token because It's a not hosted (i would add it into cache with django and call it in js and add it as a JSON header)
+@csrf_exempt
+def like_post(request, post_id, user_id):
+    if request.method == "POST":
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        
+        print('looking at post request')
+        for item in body:
+            print(f'our request post: {item}')
+        if body['action'] == 'like':
+            post = Post.objects.get(id=post_id)
+            user = User.objects.get(id=user_id) 
+            check_like = Like.objects.filter(user=user,post=post).order_by('id')
+            
+
+            if(check_like.exists()):
+                print('++there was a previous record of liking this post')
+
+
+                like = check_like[0]
+                print(f'our current like state is now: {like.like} (should be False)')
+
+                like.like = True
+                like.save()
+                print(f'our current like state is now: {like.like} (should be True)')
+
+                
+                post_likes = post.total_likes
+                print(post_likes)
+                total = post_likes + 1
+                post.total_likes = total
+                post.save()
+                post_likes = post.total_likes
+                print(post_likes)
+
+                return JsonResponse({'like': 'liked', 'total': total})
+
+
+
+            else:
+                print('--there was no previous record of liking this post')
+
+
+                #need to check if it exists before creating a new one.
+                like = Like( user=user, post=post, like=True  )
+                like.save()
+                print(f'our current like state is now: {like.like} (should be True)')
+
+                
+                post_likes = post.total_likes
+                print(post_likes)
+                total = post_likes + 1
+                post.total_likes = total
+                post.save()
+                post_likes = post.total_likes
+                print(post_likes)
+                
+                
+
+                return JsonResponse({'like': 'liked', 'total': total})
+        elif body['action'] == 'unlike':
+            print('post was just unliked')
+            post = Post.objects.get(id=post_id)
+            user = User.objects.get(id=user_id)
+            if Like.objects.filter(user=user, post=post).exists():
+                #this means the post is there
+                like = Like.objects.filter(user=user, post=post).order_by('id')[0]
+                
+                print(f'our current like state is now: {like.like} (should be True)')
+
+                like.like = False
+                like.save()
+                print(f'our current like state is now: {like.like} (should be false)')
+
+                post_likes = post.total_likes
+                
+                total = post_likes - 1
+                post.total_likes = total
+                post.save()
+                post_likes = post.total_likes
+                
+            
+                
+
+                
+                #TODO update total for table post
+                return JsonResponse({'like': 'unliked' , 'total':total})
+
+            else:
+                return JsonResponse({'like': 'error'})
+
+    
+    else:
+        return JsonResponse('get')
+
+
+#i'm going to follow bad practice here and not worry about the CSRF token because It's not hosted (i would add it into cache and call it in js and add it as a JSON header)
+@csrf_exempt
+def follow_user(request, user_id, user_to_follow):
+    user_following = User.objects.get(id=user_id)
+    user_followed = User.objects.get(id=user_to_follow)
+    if request.method == 'GET':
+        
+        follow_item = Follow.objects.filter(following_user=user_following,followed_user=user_followed)
+        if(follow_item.exists()):
+            return JsonResponse({'status': 'True'})
+        else:
+            return JsonResponse({'status': 'False'})
+
+        #return if the user is followed
+        #make sure to clarify the request has the same user id
+        
+    
+    elif request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+
+        for item in body:
+            print(f'our request post: {item}')
+
+        print(body['action'] )
+
+        #make sure to clarify the request has the same user id
+        # change the db to have a follow entry.
+        if body['action'] == 'true':
+
+            foll = Follow(following_user=user_following,followed_user=user_followed)
+            foll.save()
+            return JsonResponse({'followed':'user followed'})
+        elif body['action'] == 'false':
+            Follow.objects.filter(following_user=user_following,followed_user=user_followed).delete()
+            return JsonResponse({'followed':'user unfollowed'})
+
+
+
+
+
+
+
 def all_posts(request):
-    print("starting all posts")
     if request.method == "GET":
         curr_page = request.GET.get('page', None)
 
-        posts = Post.objects.all()
+        posts = Post.objects.all().order_by('-time')
 
         #TODO add in an option for an unsigned in user
-        print(f'our requests user id is: {request.user.id}')
         if(request.user.id != None):
             requesting_id = request.user.id
             requesting_user = User.objects.get(id=requesting_id)
@@ -98,13 +272,12 @@ def all_posts(request):
 def following(request, id):
     #going to have to do a check for the following user to make sure its' same as user
     #don't want to allow users to see others following?
-    print("starting the following func")
     if request.method == "GET":
         curr_page = request.GET.get('page', None)
         #need to filter to only following users
         user = User.objects.get(id=id)
         following = Follow.objects.filter(following_user=user)
-        posts = Post.objects.filter(user__in=following.values_list('followed_user', flat=True))
+        posts = Post.objects.filter(user__in=following.values_list('followed_user', flat=True)).order_by('-time')
         #TODO add in an option for an unsigned in user
         requesting_id = request.user.id
         requesting_user = User.objects.get(id=requesting_id)
@@ -114,7 +287,6 @@ def following(request, id):
         return JsonResponse(data,safe = False)
 
     else:
-        print(request)
         #return all posts for who the user follows
         return JsonResponse({"user": "post"})
 
@@ -123,7 +295,7 @@ def user(request, id):
         curr_page = request.GET.get('page', None)
         #need to filter to only following users
         user = User.objects.get(id=id)
-        posts = Post.objects.filter(user=user)
+        posts = Post.objects.filter(user=user).order_by('-time')
 
         #following is how many users follow the user with id
         #followers is how many users id follows
@@ -149,7 +321,6 @@ def get_user(request):
     if request.method == "GET":
 
         if request.user:
-            print(f'our usernameid is: {request.user.id}')
             return JsonResponse({"id" : request.user.id})
         else:
             return JsonResponse({"id" : "no username in get"})

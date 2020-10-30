@@ -46,5 +46,16 @@
 .unlike{
     border-radius: 50%;
     background-color: orange;
+}
+#unfollow{
+    background-color: lightblue;
+
+}
+#follow{
+    background-color: lightblue;
+
+}
+#submit_chirp{
+    background-color: lightblue;
 
 }

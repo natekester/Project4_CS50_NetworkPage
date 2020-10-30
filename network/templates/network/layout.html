@@ -17,6 +17,8 @@
             <div>
               <ul class="navbar-nav mr-auto">
                 {% if user.is_authenticated %}
+                    <meta name="csrf-token" content="{{ csrf_token }}">
+
                     <li class="nav-item">
                         <a class="nav-link" data-link="user" ><strong>{{ user.username }}</strong></a>
                     </li>

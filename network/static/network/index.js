@@ -1,5 +1,9 @@
 
 document.addEventListener('DOMContentLoaded', function() {
+  onLoad();
+});
+
+function onLoad(){
 
   var path = window.location.href;
   var id = null;
@@ -35,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if(page == ""){
       page = "all_posts"
     }
-    console.log(`loading page with page: ${page}, id: ${id}, and section: ${loadSection}`)
     
     loadPage(page, id, loadSection);
 
@@ -59,8 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add the current state to the history
 
     };
-});
-});
+  });
+
+}
 
 function setupPostClick(){
   document.querySelectorAll('.user').forEach( userPost => {
@@ -76,66 +80,146 @@ function setupPostClick(){
     }
   })
   document.querySelectorAll('.like').forEach( userPost => {
-    userPost.onclick = function(){
+    userPost.onclick = async function(){
       //we need the like in the page to update and to update the database.
       const id = userPost.dataset.id;
       var post = document.querySelector(`#like_${id}`)
-      console.log(` our parsed int is: ${parseInt(post.dataset.likes)}`)
 
 
       var likes = parseInt(post.dataset.likes)+1;
       post.setAttribute('data-likes', likes);
       
       console.log(`unliking post: ${id} new likes are: ${userPost.dataset.likes}`)
-      
-      likePost(id,likes);
+      user_id = await getUserId()
+      likePost(id, user_id, likes);
 
 
     }
   })
   document.querySelectorAll('.unlike').forEach( userPost => {
-    userPost.onclick = function(){
+    userPost.onclick = async function(){
       //we need the like in the page to update and to update the database.
       const id = userPost.dataset.id;
       var post = document.querySelector(`#like_${id}`)
-      console.log(` our parsed int is: ${parseInt(post.dataset.likes)}`)
 
       var likes = parseInt(post.dataset.likes)-1;
       post.setAttribute('data-likes', likes);
       console.log(`unliking post: ${id} new likes are: ${userPost.dataset.likes}`)
       
-      unlikePost(id,likes);
+      user_id = await getUserId()
+      unlikePost(id, user_id, likes);
 
 
 
     }
   })
 
+  //bad practice - but I need to move on to learning React.
+  document.querySelectorAll('#submit_chirp').forEach( submit => {
+    submit.onclick = async function(){
+      //we need the like in the page to update and to update the database.
+      var text = document.getElementById('input_text').value;
+      console.log(`our inputed text was: ${text}`)
+      var user_id = await getUserId();
+      postResponse = await createPost(user_id, text);
+      document.getElementById('input_text').value = '';
+
+      //okay now lets just call 
+      onLoad();
+
+
+
+
+
+
+    }
+  })
+
+  document.querySelectorAll('#edit').forEach( edit => {
+    edit.onclick = async function(){
+      const post_id = edit.dataset.postid;
+
+
+    }
+  })
+
+
 }
 
-async function likePost(id, likes){
+function editPost(post_id){
 
 
+}
+
+async function createPost(user_id, text){
+
+  const url = `api/create_post`
+  
+  const response = await fetch(url, { method: "POST",
+    body: JSON.stringify({
+      user_id: `${user_id}`,
+      text: `${text}`
+    })}
+  );
+  const body = await response.json()
+  
+  return body;
+
+}
+
+async function likePost(post_id, user_id, likes){
+
+  //TODO communicate click to backend and check that the likes are the same.
+  //if they are not - update the like correctly.
 
 
-  document.querySelector(`#like_${id}`).innerHTML = `Likes: ${likes}`;
-  document.querySelector(`#like_cont_${id}`).innerHTML = `<input class="unlike" type="button" data-id=${id} value="Un-Like"></input>`;
+  document.querySelector(`#like_${post_id}`).innerHTML = `Likes: ${likes}`;
+  document.querySelector(`#like_cont_${post_id}`).innerHTML = `<input class="unlike" type="button" data-id=${post_id} value="Un-Like"></input>`;
 
+  const url = `api/like_post/${post_id}/${user_id}`
+  
+  const response = await fetch(url, { method: "POST",
+    body: JSON.stringify({
+      action: 'like'
+    })
+
+  })
+  const body = await response.json()
+  
+  if(body['like'] == "like"){
+    console.log(`backend was successfully liked`)
+  }else{
+    console.log(`there was an error liking the bacend`)
+
+  }
+
+  setupPostClick()
+  //that is a very inefficient method - but at least it reduces code - using react would be better.
+
+}
+
+async function unlikePost(post_id, user_id,  likes){
+
+    //TODO communicate click to backend and check that the likes are the same.
+  //if they are not - update the like correctly.
+
+  document.querySelector(`#like_${post_id}`).innerHTML = `Likes: ${likes}`;
+  document.querySelector(`#like_cont_${post_id}`).innerHTML = `<input class="like" type="button" data-id=${post_id} value="Like"></input>`;
+
+  const url = `api/like_post/${post_id}/${user_id}`
+  
+  const response = await fetch(url, { method: "POST",
+    body: JSON.stringify({
+      action: 'unlike'
+    })
+
+  })
+  const body = await response.json()
+  
   
 
   setupPostClick()
   //that is a very inefficient method - but at least it reduces code - using react would be better.
-  return "liked"
-}
-
-async function unlikePost(id, likes){
-
-  document.querySelector(`#like_${id}`).innerHTML = `Likes: ${likes}`;
-  document.querySelector(`#like_cont_${id}`).innerHTML = `<input class="like" type="button" data-id=${id} value="Like"></input>`;
-
-  setupPostClick()
-  //that is a very inefficient method - but at least it reduces code - using react would be better.
-  return "unliked"
 }
 
 
@@ -213,6 +297,8 @@ window.onpopstate = function(event) {
 function clearAll(){
   document.querySelector('#user_page').style.display = 'none'
   document.querySelector('#all_posts').style.display = 'none'
+  document.querySelector('#create_post').style.display = 'none'
+
   document.querySelector('#following_posts').style.display = 'none'
 
 }
@@ -236,6 +322,7 @@ function postHTML(posts){
   }
   else{
     signedIn = true;
+    user_id = posts[0][5]
   }
 
   
@@ -251,17 +338,30 @@ function postHTML(posts){
     //TODO: setup a like and unlike button here.
     var post = `<li class="page-item"><h5 class="user" data-id=${id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes" id="like_${postId}" data-likes=${likes}> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small>`;
     
+    console.log( `for post ${postId}, the state of hasLiked is ${hasLiked}`)
     if(signedIn){
+
+
       if(hasLiked == true){
         //add unlike button
-        var unlikeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="unlike" type="button" data-id=${postId} value="Un-Like"></input></div></li>`
+        var unlikeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="unlike" type="button" data-id="${postId}" value="Un-Like"></input>`
         post = post + unlikeButton;
       }
       else{
         //add like button
-        var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id=${postId} value="Like"></input></div></li>`
+        var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id="${postId}" value="Like"></input>`
         post = post + likeButton;
       }
+
+      if(id == user_id ){
+        var editButton = ` <input id="edit" type="button" data-postid="${postId}" value="Edit Post"></input></div></li>`
+        post = post + editButton;
+      }
+
+      const endTag = `</div></li>`;
+      post = post + endTag;
+
+      //now lets add an edit button if the user of the post is the same as the current user.
     }
 
     results= results + post ;
@@ -373,9 +473,37 @@ async function userPage(id, section){
   const following = posts[0][3];
   const followed = posts[0][4];
   
-  //TODO include a follow button here
-  const userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following this many Users: ${followed}</h6></div>` ;
+  var signedIn;
+  var currentUser = await getUserId();
+  var user_followed;
+ 
 
+  if( posts[0][2] == null || currentUser == id){
+    //TODO find out if the current user is following
+    signedIn = false;
+
+  }
+  else{
+    signedIn = true;
+    //check if the user is following the other user
+    //need to create new api
+    user_followed = await getIfFollowed(currentUser, id); //need to call api function to get true or false.
+
+  }
+ 
+  
+  
+  var userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following this many Users: ${followed}</h6></div>` ;
+
+
+  if(signedIn == true && user_followed == false ){
+    const followButton = `<div id="follow_cont"><input id="follow" type="button" data-loggedInUserId="${currentUser}" data-tofollowuserid="${id}" value="follow"></input></div>`;
+    userHTML = userHTML + followButton;
+  }
+  else if (signedIn == true && user_followed == true){
+    const unfollowButton = `<div id="follow_cont"><input id="unfollow" type="button" value="unfollow" data-loggedinuserid="${currentUser}" data-toFollowUserId="${id}"></input></div>`;
+    userHTML = userHTML + unfollowButton;
+  }
   
   document.querySelector('#user_page').innerHTML = userHTML;
   var results = postHTML(posts);
@@ -389,8 +517,83 @@ async function userPage(id, section){
 
   setupNextPageClick('user', section, id);
   setupPostClick();
+  setupUserFollowBotton();
 
 };
+
+async function setupUserFollowBotton(){
+
+  document.querySelectorAll('#follow').forEach( followButton => {
+    followButton.onclick = async function(){
+
+      //we need the like in the page to update and to update the database.
+      const loggedInUserid = followButton.dataset.loggedinuserid;
+      const toFollowUserId = followButton.dataset.tofollowuserid;
+
+      await followUser(loggedInUserid, toFollowUserId, true);
+
+
+      //TODO change the button to unfollow
+      document.querySelector('#follow_cont').innerHTML = `<input id="unfollow" type="button" value="unfollow" data-loggedinuserid="${loggedInUserid}" data-toFollowUserId="${toFollowUserId}"></input>`;
+      
+
+      setupUserFollowBotton();
+      
+
+    }
+  })
+
+  document.querySelectorAll('#unfollow').forEach( followButton => {
+    followButton.onclick = async function(){
+   
+      //we need the like in the page to update and to update the database.
+      const loggedInUserid = followButton.dataset.loggedinuserid;
+      const toFollowUserId = followButton.dataset.tofollowuserid;
+
+      await followUser(loggedInUserid, toFollowUserId, false);
+      //TODO change the button to follow
+
+      document.querySelector('#follow_cont').innerHTML = `<input id="follow" type="button" value="follow" data-loggedinuserid="${loggedInUserid}" data-toFollowUserId="${toFollowUserId}"></input>`;
+      
+      setupUserFollowBotton();
+    }
+  })
+
+
+};
+
+async function getIfFollowed(user_id, following_id){
+  const url = `api/follow/${user_id}/${following_id}`
+  
+  const response = await fetch(url)
+  const body = await response.json()
+
+  console.log(`Our getIfFOllowed response: ${body['status']}`)
+
+  if(body['status'] == 'True'){
+    return true;
+  }else{
+    return false;
+  }
+  
+
+
+}
+
+async function followUser(user_id, following_id, follow){
+  //follow needs to be true or false (true to follow, false unfollow)
+  const url = `api/follow/${user_id}/${following_id}`
+  
+  const response = await fetch(url, { method: "POST",
+    body: JSON.stringify({
+      action: `${follow}`
+    })}
+  );
+  const body = await response.json()
+  
+  return body;
+
+}
 
 
 async function getUserPosts(id,section){
@@ -406,6 +609,8 @@ async function getUserPosts(id,section){
 async function followingPosts(section, id){
   clearAll();
 
+
+  document.querySelector('#following_posts').style.display = 'block'
   document.querySelector('#all_posts').style.display = 'block'
 
   var posts = await getFollowingPosts(id, section);
@@ -414,6 +619,7 @@ async function followingPosts(section, id){
   
 
   document.querySelector('#all_posts').innerHTML = results;
+  document.querySelector('#following_posts').innerHTML = `Following Posts:`
   //get all posts and display from paginator
 
   setupNextPageClick('following', section, id);
@@ -454,10 +660,17 @@ async function getAllPosts(section){
 }
 
 async function allPosts(section){
+
   clearAll();
+  document.querySelector('#create_post').style.display = 'block'
   document.querySelector('#all_posts').style.display = 'block'
 
   var posts = await getAllPosts(section);
+
+
+  document.querySelector('#create_post').innerHTML = `<h5>Create a new Post!</h5><input type="text" id="input_text">
+    <br><br>
+    <input id="submit_chirp" type="button" value="Submit Chirp!">`;
 
   var results = postHTML(posts);
   

@@ -11,10 +11,13 @@ urlpatterns = [
     path("logout", views.logout_view, name="logout"),
     path("register", views.register, name="register"),
     path("api/all_posts", views.all_posts, name='all_posts'),
-    # re_path(r'^api/all_posts(?P<page>\d+)$', views.all_posts, name='all_posts'),
-    
     path("api/following/<int:id>", views.following),
     path("api/user/<int:id>", views.user, name='user'),
-    path("api/user", views.get_user, name="get_user")
+    path("api/user", views.get_user, name="get_user"),
+    path("api/like_post/<int:post_id>/<int:user_id>", views.like_post, name="like_post"),
+    path("api/follow/<int:user_id>/<int:user_to_follow>", views.follow_user, name="follow_user"),
+    path("api/create_post", views.create_post, name="create_post"),
+    path("api/edit_post", views.edit_post, name="edit_post")
+
 
 ]
