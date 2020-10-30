@@ -257,7 +257,7 @@ async function likePost(post_id, user_id, likes){
   setupPostClick()
   //that is a very inefficient method - but at least it reduces code - using react would be better.
 
-}edit
+}
 
 async function unlikePost(post_id, user_id,  likes){
 
@@ -370,7 +370,7 @@ function showSection(page) {
 
 }
 
-function postHTML(posts){
+async function postHTML(posts){
 
   
 
@@ -378,15 +378,19 @@ function postHTML(posts){
 
   var results =`<ul id="posts">`;
   var signedIn;
+  var user_id = await getUserId();
 
-  if( posts[0][2] == null){
+  console.log(`(HTML)our user id from get user ${user_id}`)
+
+  if( user_id == null){
     signedIn = false;
 
   }
   else{
     signedIn = true;
-    user_id = posts[0][5]
+    
   }
+  
 
   
   for(i=1; i<lenPosts; i++){
@@ -394,12 +398,12 @@ function postHTML(posts){
     var text = posts[i][1];
     var likes = posts[i][2];
     var date = posts[i][3];
-    var id = posts[i][4];
+    var post_user_id = posts[i][4];
     var hasLiked = posts[i][5];
     var postId = posts[i][6];
     //need new variable: hasLiked
     //TODO: setup a like and unlike button here.
-    var post = `<li class="page-item"><h5 class="user" data-id=${id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes" id="like_${postId}" data-likes=${likes}> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small>`;
+    var post = `<li class="page-item"><h5 class="user" data-id=${post_user_id}>${user}</h5><h6 class="post_text" onclick> ${text}</h6><small class="likes" id="like_${postId}" data-likes=${likes}> Likes: ${likes}</small> <Br><small class="date">   Created:${date}</small>`;
     
     console.log( `for post ${postId}, the state of hasLiked is ${hasLiked}`)
     if(signedIn){
@@ -416,9 +420,9 @@ function postHTML(posts){
         post = post + likeButton;
       }
 
-      console.log(`We have user_id from backend: ${user_id}, and post id: ${id}`)
+      console.log(`We have user_id from backend: ${user_id}, and post id: ${post_user_id}`)
 
-      if(id == user_id ){
+      if(post_user_id == user_id ){
         var editButton = ` <input id="edit" type="button" data-postid="${postId}" value="Edit Post"></input></li>`
         post = post + editButton;
       }
@@ -560,12 +564,15 @@ async function userPage(id, section){
   const following = posts[0][3];
   const followed = posts[0][4];
   
+  
   var signedIn;
   var currentUser = await getUserId();
   var user_followed;
+
+
  
 
-  if( posts[0][2] == null || currentUser == id){
+  if( currentUser == null){
     //TODO find out if the current user is following
     signedIn = false;
 
@@ -577,24 +584,24 @@ async function userPage(id, section){
     user_followed = await getIfFollowed(currentUser, id); //need to call api function to get true or false.
 
   }
- 
-  
+
   
   var userHTML = `<div id='user_section'><h2 id='user_header'>${user}</h2> <br> <h6 id="followers"> Number of Followers: ${following}</h6> <h6 id="following"> Following this many Users: ${followed}</h6></div>` ;
 
-
-  if(signedIn == true && user_followed == false ){
-    const followButton = `<div id="follow_cont"><input id="follow" type="button" data-loggedInUserId="${currentUser}" data-tofollowuserid="${id}" value="follow"></input></div>`;
-    userHTML = userHTML + followButton;
+  if( currentUser != id){
+    if(signedIn == true && user_followed == false ){
+      const followButton = `<div id="follow_cont"><input id="follow" type="button" data-loggedInUserId="${currentUser}" data-tofollowuserid="${id}" value="follow"></input></div>`;
+      userHTML = userHTML + followButton;
+    }
+    else if (signedIn == true && user_followed == true){
+      const unfollowButton = `<div id="follow_cont"><input id="unfollow" type="button" value="unfollow" data-loggedinuserid="${currentUser}" data-toFollowUserId="${id}"></input></div>`;
+      userHTML = userHTML + unfollowButton;
+    }
   }
-  else if (signedIn == true && user_followed == true){
-    const unfollowButton = `<div id="follow_cont"><input id="unfollow" type="button" value="unfollow" data-loggedinuserid="${currentUser}" data-toFollowUserId="${id}"></input></div>`;
-    userHTML = userHTML + unfollowButton;
-  }
-  
+    
   document.querySelector('#user_page').innerHTML = userHTML;
-  var results = postHTML(posts);
-
+  var results = await postHTML(posts);
+ 
   
 
   document.querySelector('#all_posts').innerHTML = results;
@@ -702,7 +709,7 @@ async function followingPosts(section, id){
 
   var posts = await getFollowingPosts(id, section);
 
-  var results = postHTML(posts);
+  var results = await postHTML(posts);
   
 
   document.querySelector('#all_posts').innerHTML = results;
@@ -749,18 +756,25 @@ async function getAllPosts(section){
 async function allPosts(section){
 
   clearAll();
-  document.querySelector('#create_post').style.display = 'block'
   document.querySelector('#all_posts').style.display = 'block'
 
-  var posts = await getAllPosts(section);
+  var user = await getUserId();
+  if (user != null){
 
+    document.querySelector('#create_post').style.display = 'block'
 
-  document.querySelector('#create_post').innerHTML = `<h5>Create a new Post!</h5><input type="text" id="input_text">
-    <br><br>
-    <input id="submit_chirp" type="button" value="Submit Chirp!">`;
-
-  var results = postHTML(posts);
   
+    document.querySelector('#create_post').innerHTML = `<h5>Create a new Post!</h5><input type="text" id="input_text">
+      <br><br>
+      <input id="submit_chirp" type="button" value="Submit Chirp!">`;
+  
+    
+
+  }
+  var posts = await getAllPosts(section);
+  
+
+  var results = await postHTML(posts);
 
   document.querySelector('#all_posts').innerHTML = results;
   //get all posts and display from paginator

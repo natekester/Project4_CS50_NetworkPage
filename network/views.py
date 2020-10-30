@@ -14,22 +14,23 @@ from .models import User, Like, Post, Follow
 pag_num = 10; #amount of pages for paginator
 
 
-def paginationJson(posts, curr_page, likes=None, user=None, following=None, followed=None):
+def paginationJson(posts, curr_page, likes=None, user=None, following=None, followed=None, user_page=None):
             
     pages = Paginator(posts, pag_num)
     page = pages.get_page(curr_page)
     
     data = {}
     position = 1
-    if(user == None ):
-        data[0] = [page.has_next(), page.has_previous(), None, following, followed, None]
+    if(user == None and user_page != None):
+        data[0] = [page.has_next(), page.has_previous(), user_page.username, following, followed, None]
         for item in page:
 
             data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, False, item.id]
             position = position + 1
 
-
-    else:
+        print(data['1'][0])
+        data[0][2] = data['1'][0]
+    elif(user_page == None and user != None):
         data[0] = [page.has_next(), page.has_previous(), user.username, following, followed, user.id ]
         for item in page:
             if likes.filter(post=item).exists() == True:
@@ -42,6 +43,30 @@ def paginationJson(posts, curr_page, likes=None, user=None, following=None, foll
                 wasLiked = False
 
             data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, wasLiked, item.id]
+            position = position + 1
+
+    elif(user_page != None and user != None):
+        data[0] = [page.has_next(), page.has_previous(), user_page.username, following, followed, user_page.id ]
+        for item in page:
+            if likes.filter(post=item).exists() == True:
+                likes_filt = likes.filter(post=item)
+                likes_filt = likes_filt.order_by('-id')
+
+            if(likes.filter(post=item).exists() and likes.filter(post=item).order_by('id')[0].like == True):
+                wasLiked = True
+            else:
+                wasLiked = False
+
+            data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, wasLiked, item.id]
+            position = position + 1
+
+
+        
+    elif(user_page == None and user == None):
+        data[0] = [page.has_next(), page.has_previous(), None, following, followed, None ]
+        for item in page:
+
+            data[f'{position}'] = [item.user.username, item.text, item.total_likes, item.time.strftime("%m/%d/%Y, %H:%M:%S"), item.user.id, None, item.id]
             position = position + 1
 
 
@@ -312,10 +337,13 @@ def user(request, id):
         following = Follow.objects.filter(followed_user = user).count()
         followed = Follow.objects.filter(following_user = user).count()
 
-        requesting_id = request.user.id
-        requesting_user = User.objects.get(id=requesting_id)
+        try:
+            requesting_id = request.user.id
+            requesting_user = User.objects.get(id=requesting_id)
+        except:
+            requesting_user = None
         likes = Like.objects.filter(post__in=posts, user=requesting_user, like=True)
-        data = paginationJson(posts, curr_page, likes, requesting_user, following, followed)
+        data = paginationJson(posts, curr_page, likes, requesting_user, following, followed, user)
 
         return JsonResponse(data,safe = False)
     if request.user:
