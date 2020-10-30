@@ -303,6 +303,7 @@ def user(request, id):
         curr_page = request.GET.get('page', None)
         #need to filter to only following users
         user = User.objects.get(id=id)
+        
         posts = Post.objects.filter(user=user).order_by('-time')
 
         #following is how many users follow the user with id
@@ -314,7 +315,7 @@ def user(request, id):
         requesting_id = request.user.id
         requesting_user = User.objects.get(id=requesting_id)
         likes = Like.objects.filter(post__in=posts, user=requesting_user, like=True)
-        data = paginationJson(posts, curr_page, likes, user, following, followed)
+        data = paginationJson(posts, curr_page, likes, requesting_user, following, followed)
 
         return JsonResponse(data,safe = False)
     if request.user:

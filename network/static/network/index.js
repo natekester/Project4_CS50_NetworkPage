@@ -372,6 +372,8 @@ function showSection(page) {
 
 function postHTML(posts){
 
+  
+
   var lenPosts = Object.keys(posts).length;
 
   var results =`<ul id="posts">`;
@@ -413,6 +415,8 @@ function postHTML(posts){
         var likeButton = `<br><div class="like_container" id="like_cont_${postId}"> <input class="like" type="button" data-id="${postId}" value="Like"></input></div>`
         post = post + likeButton;
       }
+
+      console.log(`We have user_id from backend: ${user_id}, and post id: ${id}`)
 
       if(id == user_id ){
         var editButton = ` <input id="edit" type="button" data-postid="${postId}" value="Edit Post"></input></li>`
@@ -470,6 +474,8 @@ function setupNextPageClick(page, section, id){
         section = section + 1;
         history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
         allPosts(section);
+        
+        window.scrollTo(0, 0);
 
       }
     })
@@ -480,6 +486,8 @@ function setupNextPageClick(page, section, id){
 
         history.pushState({page: page, section:section}, "", `#/${page}?page=${section}`)
         allPosts(section);
+        
+        window.scrollTo(0, 0);
 
       }
     })
@@ -491,6 +499,8 @@ function setupNextPageClick(page, section, id){
 
         history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
         followingPosts(section,id);
+        
+        window.scrollTo(0, 0);
   
       }
     })
@@ -501,6 +511,8 @@ function setupNextPageClick(page, section, id){
 
         history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
         followingPosts(section,id);
+        
+        window.scrollTo(0, 0);
 
       }
     })
@@ -511,7 +523,9 @@ function setupNextPageClick(page, section, id){
 
         history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
         userPage(section,id);
-    
+        
+        window.scrollTo(0, 0);
+
       }
     })
 
@@ -521,6 +535,9 @@ function setupNextPageClick(page, section, id){
 
         history.pushState({page: page, id:id, section:section}, "", `#/${page}/${id}?page=${section}`)
         userPage(section,id);
+        
+        window.scrollTo(0, 0);
+
   
       }
     })
